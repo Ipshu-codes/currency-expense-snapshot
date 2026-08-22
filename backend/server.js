@@ -74,6 +74,53 @@ app.delete("/expenses/:id", (req, res) => {
 
     res.status(204).send();
 });
+app.get("/convert", async (req, res) => {
+    const { from, to, amount } = req.query;
+
+    // Validate the request
+    if (!from || !to || !amount) {
+        return res.status(400).json({
+            error: "from, to, and amount are required"
+        });
+    }
+
+    const numericAmount = Number(amount);
+
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+        return res.status(400).json({
+            error: "Amount must be a positive number"
+        });
+    }
+
+    try {
+        const response = await fetch(
+            `https://api.frankfurter.dev/v2/rate/${from.toUpperCase()}/${to.toUpperCase()}`
+        );
+
+        if (!response.ok) {
+            return res.status(502).json({
+                error: "Currency conversion service unavailable"
+            });
+        }
+
+        const data = await response.json();
+
+        const convertedAmount = numericAmount * data.rate;
+
+        res.status(200).json({
+            from: from.toUpperCase(),
+            to: to.toUpperCase(),
+            amount: numericAmount,
+            rate: data.rate,
+            convertedAmount
+        });
+
+    } catch (error) {
+        res.status(502).json({
+            error: "Unable to connect to currency conversion service"
+        });
+    }
+});
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
