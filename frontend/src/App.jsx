@@ -3,7 +3,117 @@ import "./index.css";
 
 const API_URL = "http://localhost:5000";
 
-const currencies = ["NPR", "USD", "EUR", "INR", "GBP"];
+// Searchable currency selector
+function CurrencySelector({
+  label,
+  value,
+  onChange,
+  currencies,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selectedCurrency = currencies.find(
+    (currency) => currency.iso_code === value
+  );
+
+  const filteredCurrencies = currencies.filter((currency) => {
+    const searchText = search.toLowerCase();
+
+    return (
+      currency.iso_code
+        .toLowerCase()
+        .includes(searchText) ||
+      currency.name
+        .toLowerCase()
+        .includes(searchText)
+    );
+  });
+
+  const handleSelect = (currency) => {
+    onChange(currency.iso_code);
+    setSearch("");
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="currency-selector">
+      <label>{label}</label>
+
+      <button
+        type="button"
+        className="currency-selector-button"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {selectedCurrency ? (
+          <>
+            <span className="currency-code">
+              {selectedCurrency.iso_code}
+            </span>
+
+            <span className="currency-name">
+              {selectedCurrency.name}
+            </span>
+          </>
+        ) : (
+          <span>Select currency</span>
+        )}
+
+        <span className="currency-arrow">
+          {isOpen ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="currency-dropdown">
+
+          <input
+            type="text"
+            className="currency-search"
+            placeholder="Search currency..."
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            autoFocus
+          />
+
+          <div className="currency-options">
+            {filteredCurrencies.length > 0 ? (
+              filteredCurrencies.map((currency) => (
+                <button
+                  type="button"
+                  className={`currency-option ${
+                    currency.iso_code === value
+                      ? "selected"
+                      : ""
+                  }`}
+                  key={currency.iso_code}
+                  onClick={() =>
+                    handleSelect(currency)
+                  }
+                >
+                  <span className="currency-option-code">
+                    {currency.iso_code}
+                  </span>
+
+                  <span className="currency-option-name">
+                    {currency.name}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <div className="no-currencies">
+                No currencies found
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 function App() {
   const [homeCurrency, setHomeCurrency] = useState("NPR");
@@ -11,22 +121,105 @@ function App() {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("NPR");
 
+  const [currencies, setCurrencies] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [convertedExpenses, setConvertedExpenses] = useState([]);
-  const [conversionLoading, setConversionLoading] = useState(false);
+  const [conversionLoading, setConversionLoading] =
+    useState(false);
   const [error, setError] = useState("");
 
-  // Fetch expenses when app loads
+  // Fetch supported currencies
   useEffect(() => {
-    fetch(`${API_URL}/expenses`)
-      .then((response) => response.json())
-      .then((data) => {
-        setExpenses(data);
-      })
-      .catch(() => {
-        setError("Could not connect to backend");
-      });
+    const fetchCurrencies = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/currencies`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+              "Could not fetch currencies"
+          );
+        }
+
+        // Keep the complete currency objects
+        // instead of only extracting iso_code.
+        const validCurrencies = data.filter(
+          (item) =>
+            item && item.iso_code && item.name
+        );
+
+        setCurrencies(validCurrencies);
+
+        // Default to NPR if available
+        const nprExists = validCurrencies.some(
+          (item) => item.iso_code === "NPR"
+        );
+
+        if (nprExists) {
+          setHomeCurrency("NPR");
+          setCurrency("NPR");
+        } else if (validCurrencies.length > 0) {
+          setHomeCurrency(
+            validCurrencies[0].iso_code
+          );
+
+          setCurrency(
+            validCurrencies[0].iso_code
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Currency loading error:",
+          error
+        );
+
+        setError(
+          "Could not load supported currencies"
+        );
+      }
+    };
+
+    fetchCurrencies();
   }, []);
+
+
+  // Fetch expenses
+  useEffect(() => {
+    const fetchExpenses = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/expenses`
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error ||
+              "Could not fetch expenses"
+          );
+        }
+
+        setExpenses(data);
+      } catch (error) {
+        console.error(
+          "Expense loading error:",
+          error
+        );
+
+        setError(
+          "Could not connect to backend"
+        );
+      }
+    };
+
+    fetchExpenses();
+  }, []);
+
 
   // Add expense
   const handleSubmit = async (e) => {
@@ -34,22 +227,29 @@ function App() {
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/expenses`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title,
-          amount: Number(amount),
-          currency,
-        }),
-      });
+      const response = await fetch(
+        `${API_URL}/expenses`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            title,
+            amount: Number(amount),
+            currency,
+          }),
+        }
+      );
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Could not add expense");
+        setError(
+          data.error ||
+            "Could not add expense"
+        );
+
         return;
       }
 
@@ -60,88 +260,158 @@ function App() {
 
       setTitle("");
       setAmount("");
-      setCurrency("NPR");
     } catch (error) {
-      setError("Could not connect to backend");
+      console.error(
+        "Add expense error:",
+        error
+      );
+
+      setError(
+        "Could not connect to backend"
+      );
     }
   };
+
 
   // Delete expense
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`${API_URL}/expenses/${id}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API_URL}/expenses/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error("Failed to delete expense");
+        throw new Error(
+          "Failed to delete expense"
+        );
       }
 
       setExpenses((previousExpenses) =>
-        previousExpenses.filter((expense) => expense.id !== id)
+        previousExpenses.filter(
+          (expense) =>
+            expense.id !== id
+        )
       );
     } catch (error) {
-      setError("Could not delete expense");
+      console.error(
+        "Delete expense error:",
+        error
+      );
+
+      setError(
+        "Could not delete expense"
+      );
     }
   };
 
+
   // Convert all expenses to home currency
   const convertExpenses = async () => {
+    if (
+      !homeCurrency ||
+      expenses.length === 0
+    ) {
+      setConvertedExpenses([]);
+      return;
+    }
+
     setConversionLoading(true);
     setError("");
 
     try {
-      const converted = await Promise.all(
-        expenses.map(async (expense) => {
-          if (expense.currency === homeCurrency) {
-            return {
-              ...expense,
-              convertedAmount: expense.amount,
-            };
-          }
+      const converted =
+        await Promise.all(
+          expenses.map(
+            async (expense) => {
+              // No conversion needed
+              if (
+                expense.currency ===
+                homeCurrency
+              ) {
+                return {
+                  ...expense,
+                  convertedAmount:
+                    expense.amount,
+                };
+              }
 
-          const response = await fetch(
-            `${API_URL}/convert?from=${expense.currency}&to=${homeCurrency}&amount=${expense.amount}`
-          );
+              const response =
+                await fetch(
+                  `${API_URL}/convert?from=${encodeURIComponent(
+                    expense.currency
+                  )}&to=${encodeURIComponent(
+                    homeCurrency
+                  )}&amount=${encodeURIComponent(
+                    expense.amount
+                  )}`
+                );
 
-          const data = await response.json();
+              const data =
+                await response.json();
 
-          if (!response.ok) {
-            throw new Error(
-              data.error || "Currency conversion failed"
-            );
-          }
+              if (!response.ok) {
+                throw new Error(
+                  data.error ||
+                    "Currency conversion failed"
+                );
+              }
 
-          return {
-            ...expense,
-            convertedAmount: data.convertedAmount,
-          };
-        })
+              return {
+                ...expense,
+                convertedAmount:
+                  data.convertedAmount,
+              };
+            }
+          )
+        );
+
+      setConvertedExpenses(
+        converted
+      );
+    } catch (error) {
+      console.error(
+        "Conversion error:",
+        error
       );
 
-      setConvertedExpenses(converted);
-    } catch (error) {
-      setError("Could not convert expenses");
+      setConvertedExpenses([]);
+
+      setError(
+        "Could not convert expenses"
+      );
     } finally {
       setConversionLoading(false);
     }
   };
 
+
   // Convert whenever expenses or home currency changes
   useEffect(() => {
-    if (expenses.length > 0) {
+    if (
+      expenses.length > 0 &&
+      homeCurrency
+    ) {
       convertExpenses();
     } else {
       setConvertedExpenses([]);
     }
   }, [expenses, homeCurrency]);
 
+
   // Calculate total
-  const total = convertedExpenses.reduce(
-    (sum, expense) =>
-      sum + Number(expense.convertedAmount),
-    0
-  );
+  const total =
+    convertedExpenses.reduce(
+      (sum, expense) =>
+        sum +
+        Number(
+          expense.convertedAmount
+        ),
+      0
+    );
+
 
   return (
     <div className="app">
@@ -149,9 +419,12 @@ function App() {
 
         {/* HERO */}
         <header className="hero">
+
           <div className="hero-content">
             <div className="brand">
-              <span>CURRENCY-EXPENSE-SNAPSHOT</span>
+              <span>
+                CURRENCY-EXPENSE-SNAPSHOT
+              </span>
             </div>
 
             <p className="subtitle">
@@ -163,6 +436,7 @@ function App() {
             </div>
           </div>
 
+
           <div className="cat-wrapper">
             <img
               src="/cat-money.png"
@@ -171,35 +445,26 @@ function App() {
             />
           </div>
 
-          <div className="currency-picker">
-            <label htmlFor="homeCurrency">
-              Home currency
-            </label>
 
-            <select
-              id="homeCurrency"
-              value={homeCurrency}
-              onChange={(e) =>
-                setHomeCurrency(e.target.value)
-              }
-            >
-              {currencies.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* HOME CURRENCY */}
+          <CurrencySelector
+            label="Home currency"
+            value={homeCurrency}
+            onChange={setHomeCurrency}
+            currencies={currencies}
+          />
+
         </header>
 
-        
+
         {error && (
           <div className="error">
             {error}
           </div>
         )}
 
-      
+
+        {/* SUMMARY */}
         <section className="summary-grid">
 
           <div className="summary-card primary">
@@ -208,13 +473,15 @@ function App() {
             </div>
 
             <div className="total-amount">
-              {homeCurrency} {total.toFixed(2)}
+              {homeCurrency}{" "}
+              {total.toFixed(2)}
             </div>
 
             <div className="card-note">
               Across all your expenses
             </div>
           </div>
+
 
           <div className="summary-card">
             <div className="card-label">
@@ -232,6 +499,7 @@ function App() {
             </div>
           </div>
 
+
           <div className="summary-card">
             <div className="card-label">
               CURRENCY
@@ -248,7 +516,8 @@ function App() {
 
         </section>
 
-        
+
+        {/* ADD EXPENSE */}
         <section className="add-section">
 
           <div className="section-heading">
@@ -260,6 +529,7 @@ function App() {
               <h2>Add an expense</h2>
             </div>
           </div>
+
 
           <form
             onSubmit={handleSubmit}
@@ -283,6 +553,7 @@ function App() {
               />
             </div>
 
+
             <div className="input-group">
               <label htmlFor="amount">
                 Amount
@@ -302,25 +573,15 @@ function App() {
               />
             </div>
 
-            <div className="input-group">
-              <label htmlFor="currency">
-                Currency
-              </label>
 
-              <select
-                id="currency"
-                value={currency}
-                onChange={(e) =>
-                  setCurrency(e.target.value)
-                }
-              >
-                {currencies.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* EXPENSE CURRENCY */}
+            <CurrencySelector
+              label="Currency"
+              value={currency}
+              onChange={setCurrency}
+              currencies={currencies}
+            />
+
 
             <button
               className="add-button"
@@ -330,7 +591,9 @@ function App() {
             </button>
 
           </form>
+
         </section>
+
 
         {/* EXPENSE LIST */}
         <section className="expenses-section">
@@ -351,12 +614,15 @@ function App() {
             )}
           </div>
 
+
           {conversionLoading ? (
             <p>
               Converting your expenses...
             </p>
-          ) : convertedExpenses.length === 0 ? (
+          ) : convertedExpenses.length ===
+            0 ? (
             <div className="empty-state">
+
               <div className="empty-icon">
                 —
               </div>
@@ -369,66 +635,82 @@ function App() {
                 Add your first expense above
                 and it'll appear here.
               </p>
+
             </div>
           ) : (
+
             <div className="expense-list">
 
-              {convertedExpenses.map((expense) => (
-                <div
-                  className="expense-item"
-                  key={expense.id}
-                >
+              {convertedExpenses.map(
+                (expense) => (
 
-                  <div className="expense-icon">
-                    —
-                  </div>
-
-                  <div className="expense-info">
-                    <h3>
-                      {expense.title}
-                    </h3>
-
-                    <p>
-                      {expense.amount}{" "}
-                      {expense.currency}
-                    </p>
-                  </div>
-
-                  <div className="expense-amount">
-
-                    <strong>
-                      {homeCurrency}{" "}
-                      {Number(
-                        expense.convertedAmount
-                      ).toFixed(2)}
-                    </strong>
-
-                    {expense.currency !== homeCurrency && (
-                      <span>
-                        converted from{" "}
-                        {expense.currency}
-                      </span>
-                    )}
-
-                  </div>
-
-                  <button
-                    className="delete-button"
-                    onClick={() =>
-                      handleDelete(expense.id)
-                    }
-                    aria-label={`Delete ${expense.title}`}
+                  <div
+                    className="expense-item"
+                    key={expense.id}
                   >
-                    ×
-                  </button>
 
-                </div>
-              ))}
+                    <div className="expense-icon">
+                      —
+                    </div>
+
+
+                    <div className="expense-info">
+
+                      <h3>
+                        {expense.title}
+                      </h3>
+
+                      <p>
+                        {expense.amount}{" "}
+                        {expense.currency}
+                      </p>
+
+                    </div>
+
+
+                    <div className="expense-amount">
+
+                      <strong>
+                        {homeCurrency}{" "}
+                        {Number(
+                          expense.convertedAmount
+                        ).toFixed(2)}
+                      </strong>
+
+                      {expense.currency !==
+                        homeCurrency && (
+                        <span>
+                          converted from{" "}
+                          {expense.currency}
+                        </span>
+                      )}
+
+                    </div>
+
+
+                    <button
+                      className="delete-button"
+                      onClick={() =>
+                        handleDelete(
+                          expense.id
+                        )
+                      }
+                      aria-label={`Delete ${expense.title}`}
+                    >
+                      ×
+                    </button>
+
+                  </div>
+
+                )
+              )}
 
             </div>
+
           )}
 
         </section>
+
 
         <footer>
           Keep track of things!

@@ -32,11 +32,7 @@ Currency-expense-snapshot is a simple expense-tracking web application that allo
 
 The application supports:
 
-* NPR
-* USD
-* EUR
-* INR
-* GBP
+- All available currencies from Frankfurter.
 
 ## Setup and Running
 
@@ -160,7 +156,7 @@ No database is used for this project.
 ## Assumptions
 
 * Users can select one home currency for viewing their total spending.
-* The supported currencies are limited to NPR, USD, EUR, INR, and GBP.
+* The supported currencies are available currencies from Frankfurter..
 * Expense amounts must be positive numbers.
 * Currency conversion is handled by the backend.
 * Data persistence is not required because the assignment specifies in-memory storage.
@@ -170,7 +166,6 @@ No database is used for this project.
 ## Things I Would Improve With More Time
 
 * Add expense dates and categories.
-* Add more supported currencies.
 * Improve validation and error handling.
 
 
