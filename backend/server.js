@@ -9,34 +9,32 @@ const VALID_CURRENCIES = ["USD", "NPR", "EUR", "INR", "GBP"];
 app.use(cors());
 app.use(express.json());
 
-// In-memory storage
+
 let expenses = [];
 let nextId = 1;
 
-// Test route
+
 app.get("/", (req, res) => {
   res.json({
     message: "Currency Expense API is running",
   });
 });
 
-// Get all expenses
 app.get("/expenses", (req, res) => {
   res.status(200).json(expenses);
 });
 
-// Add expense
 app.post("/expenses", (req, res) => {
   const { title, amount, currency } = req.body;
 
-  // Validate title
+  
   if (!title || typeof title !== "string" || title.trim() === "") {
     return res.status(400).json({
       error: "Title is required",
     });
   }
 
-  // Validate amount
+  
   if (
     amount === undefined ||
     amount === null ||
@@ -48,7 +46,7 @@ app.post("/expenses", (req, res) => {
     });
   }
 
-  // Validate currency
+
   if (
     !currency ||
     !VALID_CURRENCIES.includes(currency.toUpperCase())
@@ -71,7 +69,7 @@ app.post("/expenses", (req, res) => {
   res.status(201).json(expense);
 });
 
-// Delete expense
+
 app.delete("/expenses/:id", (req, res) => {
   const id = Number(req.params.id);
 
@@ -90,11 +88,10 @@ app.delete("/expenses/:id", (req, res) => {
   res.status(204).send();
 });
 
-// Convert currency
 app.get("/convert", async (req, res) => {
   const { from, to, amount } = req.query;
 
-  // Validate required parameters
+  
   if (!from || !to || !amount) {
     return res.status(400).json({
       error: "from, to, and amount are required",
@@ -103,7 +100,7 @@ app.get("/convert", async (req, res) => {
 
   const numericAmount = Number(amount);
 
-  // Validate amount
+  
   if (Number.isNaN(numericAmount) || numericAmount <= 0) {
     return res.status(400).json({
       error: "Amount must be a positive number",
@@ -123,7 +120,7 @@ app.get("/convert", async (req, res) => {
     });
   }
 
-  // No API call needed if currencies are the same
+  
   if (fromCurrency === toCurrency) {
     return res.status(200).json({
       from: fromCurrency,
@@ -165,7 +162,7 @@ app.get("/convert", async (req, res) => {
   }
 });
 
-// Start server
+
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

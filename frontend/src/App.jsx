@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
+import "./index.css";
 
 const API_URL = "http://localhost:5000";
+
+const currencies = ["NPR", "USD", "EUR", "INR", "GBP"];
 
 function App() {
   const [homeCurrency, setHomeCurrency] = useState("NPR");
@@ -37,20 +40,23 @@ function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          title: title,
+          title,
           amount: Number(amount),
-          currency: currency,
+          currency,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error);
+        setError(data.error || "Could not add expense");
         return;
       }
 
-      setExpenses([...expenses, data]);
+      setExpenses((previousExpenses) => [
+        ...previousExpenses,
+        data,
+      ]);
 
       setTitle("");
       setAmount("");
@@ -71,8 +77,8 @@ function App() {
         throw new Error("Failed to delete expense");
       }
 
-      setExpenses(
-        expenses.filter((expense) => expense.id !== id)
+      setExpenses((previousExpenses) =>
+        previousExpenses.filter((expense) => expense.id !== id)
       );
     } catch (error) {
       setError("Could not delete expense");
@@ -87,7 +93,6 @@ function App() {
     try {
       const converted = await Promise.all(
         expenses.map(async (expense) => {
-          // No API call needed if currencies are the same
           if (expense.currency === homeCurrency) {
             return {
               ...expense,
@@ -133,88 +138,303 @@ function App() {
 
   // Calculate total
   const total = convertedExpenses.reduce(
-    (sum, expense) => sum + expense.convertedAmount,
+    (sum, expense) =>
+      sum + Number(expense.convertedAmount),
     0
   );
 
   return (
-    <div>
-      <h1>Currency & Expense Snapshot</h1>
+    <div className="app">
+      <main className="container">
 
-      <h2>Add Expense</h2>
+        {/* HERO */}
+        <header className="hero">
+          <div className="hero-content">
+            <div className="brand">
+              <span>CURRENCY-EXPENSE-SNAPSHOT</span>
+            </div>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          placeholder="Expense title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-
-        <input
-          type="number"
-          placeholder="Amount"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-
-        <select
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-        >
-          <option value="NPR">NPR</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-          <option value="INR">INR</option>
-          <option value="GBP">GBP</option>
-        </select>
-
-        <button type="submit">Add Expense</button>
-      </form>
-
-      {error && <p>{error}</p>}
-
-      <h2>Home Currency</h2>
-
-      <select
-        value={homeCurrency}
-        onChange={(e) => setHomeCurrency(e.target.value)}
-      >
-        <option value="NPR">NPR</option>
-        <option value="USD">USD</option>
-        <option value="EUR">EUR</option>
-        <option value="INR">INR</option>
-        <option value="GBP">GBP</option>
-      </select>
-
-      <h2>Expenses</h2>
-
-      {conversionLoading && <p>Converting expenses...</p>}
-
-      {!conversionLoading &&
-        convertedExpenses.map((expense) => (
-          <div key={expense.id}>
-            <h3>{expense.title}</h3>
-
-            <p>
-              Original: {expense.amount} {expense.currency}
+            <p className="subtitle">
+              Where do you spend the most?
             </p>
 
-            <p>
-              Converted:{" "}
-              {Number(expense.convertedAmount).toFixed(2)}{" "}
-              {homeCurrency}
-            </p>
-
-            <button onClick={() => handleDelete(expense.id)}>
-              Delete
-            </button>
+            <div className="hero-note">
+              Spend mindfully
+            </div>
           </div>
-        ))}
 
-      <h2>
-        Total: {total.toFixed(2)} {homeCurrency}
-      </h2>
+          <div className="cat-wrapper">
+            <img
+              src="/cat-money.png"
+              alt="Cute cat holding money and a calculator"
+              className="cat-image"
+            />
+          </div>
+
+          <div className="currency-picker">
+            <label htmlFor="homeCurrency">
+              Home currency
+            </label>
+
+            <select
+              id="homeCurrency"
+              value={homeCurrency}
+              onChange={(e) =>
+                setHomeCurrency(e.target.value)
+              }
+            >
+              {currencies.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+        </header>
+
+        
+        {error && (
+          <div className="error">
+            {error}
+          </div>
+        )}
+
+      
+        <section className="summary-grid">
+
+          <div className="summary-card primary">
+            <div className="card-label">
+              TOTAL SPENT
+            </div>
+
+            <div className="total-amount">
+              {homeCurrency} {total.toFixed(2)}
+            </div>
+
+            <div className="card-note">
+              Across all your expenses
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <div className="card-label">
+              EXPENSES
+            </div>
+
+            <div className="summary-number">
+              {expenses.length}
+            </div>
+
+            <div className="card-note">
+              {expenses.length === 1
+                ? "expense added"
+                : "expenses added"}
+            </div>
+          </div>
+
+          <div className="summary-card">
+            <div className="card-label">
+              CURRENCY
+            </div>
+
+            <div className="summary-number">
+              {homeCurrency}
+            </div>
+
+            <div className="card-note">
+              Your home currency
+            </div>
+          </div>
+
+        </section>
+
+        
+        <section className="add-section">
+
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">
+                QUICK ADD
+              </span>
+
+              <h2>Add an expense</h2>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSubmit}
+            className="expense-form"
+          >
+
+            <div className="input-group title-input">
+              <label htmlFor="title">
+                What did you spend on?
+              </label>
+
+              <input
+                id="title"
+                type="text"
+                placeholder="e.g. Coffee, groceries..."
+                value={title}
+                onChange={(e) =>
+                  setTitle(e.target.value)
+                }
+                required
+              />
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="amount">
+                Amount
+              </label>
+
+              <input
+                id="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) =>
+                  setAmount(e.target.value)
+                }
+                required
+              />
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="currency">
+                Currency
+              </label>
+
+              <select
+                id="currency"
+                value={currency}
+                onChange={(e) =>
+                  setCurrency(e.target.value)
+                }
+              >
+                {currencies.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              className="add-button"
+              type="submit"
+            >
+              Add expense
+            </button>
+
+          </form>
+        </section>
+
+        {/* EXPENSE LIST */}
+        <section className="expenses-section">
+
+          <div className="section-heading">
+            <div>
+              <span className="eyebrow">
+                YOUR SPENDING
+              </span>
+
+              <h2>Recent expenses</h2>
+            </div>
+
+            {expenses.length > 0 && (
+              <span className="expense-count">
+                {expenses.length}
+              </span>
+            )}
+          </div>
+
+          {conversionLoading ? (
+            <p>
+              Converting your expenses...
+            </p>
+          ) : convertedExpenses.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">
+                —
+              </div>
+
+              <h3>
+                No expenses yet
+              </h3>
+
+              <p>
+                Add your first expense above
+                and it'll appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="expense-list">
+
+              {convertedExpenses.map((expense) => (
+                <div
+                  className="expense-item"
+                  key={expense.id}
+                >
+
+                  <div className="expense-icon">
+                    —
+                  </div>
+
+                  <div className="expense-info">
+                    <h3>
+                      {expense.title}
+                    </h3>
+
+                    <p>
+                      {expense.amount}{" "}
+                      {expense.currency}
+                    </p>
+                  </div>
+
+                  <div className="expense-amount">
+
+                    <strong>
+                      {homeCurrency}{" "}
+                      {Number(
+                        expense.convertedAmount
+                      ).toFixed(2)}
+                    </strong>
+
+                    {expense.currency !== homeCurrency && (
+                      <span>
+                        converted from{" "}
+                        {expense.currency}
+                      </span>
+                    )}
+
+                  </div>
+
+                  <button
+                    className="delete-button"
+                    onClick={() =>
+                      handleDelete(expense.id)
+                    }
+                    aria-label={`Delete ${expense.title}`}
+                  >
+                    ×
+                  </button>
+
+                </div>
+              ))}
+
+            </div>
+          )}
+
+        </section>
+
+        <footer>
+          Keep track of things!
+        </footer>
+
+      </main>
     </div>
   );
 }
