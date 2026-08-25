@@ -54,10 +54,10 @@ Install the dependencies:
 npm install
 ```
 
-Start the backend:
+Run the backend:
 
 ```bash
-npm start
+node server.js
 ```
 
 The backend runs on:
@@ -80,27 +80,18 @@ Install the dependencies:
 npm install
 ```
 
-Start the frontend:
+Run the frontend:
 
 ```bash
-npm start
+npm run dev
 ```
 
-The frontend will run using the Vite development server.
 
-> Note: The `npm start` command should be configured in `frontend/package.json` to run Vite. For example:
->
-> ```json
-> "scripts": {
->   "start": "vite"
-> }
-> ```
-
-Open the local frontend URL shown in the terminal.
 
 ## Exchange Rate API
 
 This project uses the **Frankfurter API** for currency exchange rates.
+No API key is required to use the Frankfurter API, so no API key configuration is necessary.
 Currency conversion is handled by the backend through the `/convert` endpoint. The frontend sends the source currency, target currency, and amount to the backend, which retrieves the exchange rate and returns the converted amount.
 
 Example:
@@ -156,7 +147,7 @@ No database is used for this project.
 ## Assumptions
 
 * Users can select one home currency for viewing their total spending.
-* The supported currencies are available currencies from Frankfurter..
+* The supported currencies are available currencies from Frankfurter.
 * Expense amounts must be positive numbers.
 * Currency conversion is handled by the backend.
 * Data persistence is not required because the assignment specifies in-memory storage.
