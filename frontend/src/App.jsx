@@ -417,7 +417,6 @@ function App() {
     <div className="app">
       <main className="container">
 
-        {/* HERO */}
         <header className="hero">
 
           <div className="hero-content">
@@ -445,8 +444,6 @@ function App() {
             />
           </div>
 
-
-          {/* HOME CURRENCY */}
           <CurrencySelector
             label="Home currency"
             value={homeCurrency}
@@ -463,8 +460,6 @@ function App() {
           </div>
         )}
 
-
-        {/* SUMMARY */}
         <section className="summary-grid">
 
           <div className="summary-card primary">
@@ -516,8 +511,6 @@ function App() {
 
         </section>
 
-
-        {/* ADD EXPENSE */}
         <section className="add-section">
 
           <div className="section-heading">
@@ -573,8 +566,6 @@ function App() {
               />
             </div>
 
-
-            {/* EXPENSE CURRENCY */}
             <CurrencySelector
               label="Currency"
               value={currency}
@@ -594,8 +585,6 @@ function App() {
 
         </section>
 
-
-        {/* EXPENSE LIST */}
         <section className="expenses-section">
 
           <div className="section-heading">
